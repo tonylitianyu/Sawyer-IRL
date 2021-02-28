@@ -6,6 +6,7 @@ import copy
 import rospy
 import moveit_commander
 import moveit_msgs.msg
+from std_msgs.msg import String, Bool
 
 class MoveGroupPythonInterface(object):
     def __init__(self):
@@ -28,21 +29,40 @@ class MoveGroupPythonInterface(object):
                                                         moveit_msgs.msg.DisplayTrajectory,
                                                         queue_size=20)
 
-        self.curr_pose = self.group.get_current_pose().pose
+        self.action_sub = rospy.Subscriber('action', String, self.arm_primitive_action_callback)
 
-        self.curr_pose.position.z -= 0.1
-        #self.curr_pose.position.y += 0.2
-        self.group.set_pose_target(self.curr_pose)
-
-        success, traj, p_time, errorcode = self.group.plan()
-        self.group.stop()
-        self.group.clear_pose_targets()
-        self.group.execute(traj, wait=True)
-        rospy.loginfo('up')
-        
+        self.prim_dis = 0.2
 
 
+    def arm_primitive_action_callback(self, req):
+        if req == String('left'):
+            self.move_left()
+        elif req == String('forward'):
+            self.move_forward()
 
+
+    def move_left(self):
+            curr_pose = self.group.get_current_pose().pose
+            curr_pose.position.y += self.prim_dis
+            self.group.set_pose_target(curr_pose)
+
+            success, traj, p_time, errorcode = self.group.plan()
+            self.group.stop()
+            self.group.clear_pose_targets()
+            self.group.execute(traj, wait=True)
+            rospy.loginfo('left')
+
+    def move_forward(self):
+            curr_pose = self.group.get_current_pose().pose
+
+            curr_pose.position.x += self.prim_dis
+            self.group.set_pose_target(curr_pose)
+
+            success, traj, p_time, errorcode = self.group.plan()
+            self.group.stop()
+            self.group.clear_pose_targets()
+            self.group.execute(traj, wait=True)
+            rospy.loginfo('forward')
 
 
 def main():
