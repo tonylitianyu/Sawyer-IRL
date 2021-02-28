@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+
+
+import sys
+import copy
+import rospy
+import moveit_commander
+import moveit_msgs.msg
+
+class MoveGroupPythonInterface(object):
+    def __init__(self):
+        super(MoveGroupPythonInterface, self).__init__()
+
+        rospy.init_node('primitives', anonymous=True)
+        joint_state_topic = ['joint_states:=/robot/joint_states']
+        ## First initialize `moveit_commander`_ and a `rospy`_ node:
+        #moveit_commander.roscpp_initialize(joint_state_topic)
+        
+        robot = moveit_commander.RobotCommander()#(robot_description='/robot_description')
+
+        scene = moveit_commander.PlanningSceneInterface()
+
+        group_name = "right_arm"
+        self.group = moveit_commander.MoveGroupCommander(group_name)#(robot_description='/robot_description', name=group_name)
+        self.group.set_max_velocity_scaling_factor(1) # increase robot joint speeds
+
+        display_trajectory_publisher = rospy.Publisher("move_group/display_planned_path",
+                                                        moveit_msgs.msg.DisplayTrajectory,
+                                                        queue_size=20)
+
+        self.curr_pose = self.group.get_current_pose().pose
+
+        self.curr_pose.position.z -= 0.1
+        #self.curr_pose.position.y += 0.2
+        self.group.set_pose_target(self.curr_pose)
+
+        success, traj, p_time, errorcode = self.group.plan()
+        self.group.stop()
+        self.group.clear_pose_targets()
+        self.group.execute(traj, wait=True)
+        rospy.loginfo('up')
+        
+
+
+
+
+
+def main():
+    moveit_commander.roscpp_initialize(sys.argv)
+    mover = MoveGroupPythonInterface()
+
+    rospy.spin()
+
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
