@@ -35,62 +35,26 @@ class MoveGroupPythonInterface(object):
 
 
     def arm_primitive_action_callback(self, req):
-        if req == String('left'):
-            self.move_left()
-        elif req == String('forward'):
-            self.move_forward()
-        elif req == String('backward'):
-            self.move_backward()
-        elif req == String('right'):
-            self.move_right()
+        self.perform_primitive_move(req)
 
-
-    def move_left(self):
-            curr_pose = self.group.get_current_pose().pose
+    def perform_primitive_move(self,dir):
+        curr_pose = self.group.get_current_pose().pose
+        if dir == String('left'):
             curr_pose.position.y += self.prim_dis
-            self.group.set_pose_target(curr_pose)
-
-            success, traj, p_time, errorcode = self.group.plan()
-            self.group.stop()
-            self.group.clear_pose_targets()
-            self.group.execute(traj, wait=True)
-            rospy.loginfo('left')
-
-    def move_forward(self):
-            curr_pose = self.group.get_current_pose().pose
-
+        elif dir == String('forward'):
             curr_pose.position.x += self.prim_dis
-            self.group.set_pose_target(curr_pose)
-
-            success, traj, p_time, errorcode = self.group.plan()
-            self.group.stop()
-            self.group.clear_pose_targets()
-            self.group.execute(traj, wait=True)
-            rospy.loginfo('forward')
-
-    def move_right(self):
-            curr_pose = self.group.get_current_pose().pose
-
+        elif dir == String('right'):
             curr_pose.position.y -= self.prim_dis
-            self.group.set_pose_target(curr_pose)
-
-            success, traj, p_time, errorcode = self.group.plan()
-            self.group.stop()
-            self.group.clear_pose_targets()
-            self.group.execute(traj, wait=True)
-            rospy.loginfo('right')
-
-    def move_backward(self):
-            curr_pose = self.group.get_current_pose().pose
-
+        elif dir == String('backward'):
             curr_pose.position.x -= self.prim_dis
-            self.group.set_pose_target(curr_pose)
 
-            success, traj, p_time, errorcode = self.group.plan()
-            self.group.stop()
-            self.group.clear_pose_targets()
-            self.group.execute(traj, wait=True)
-            rospy.loginfo('backward')
+        self.group.set_pose_target(curr_pose)
+        success, traj, p_time, errorcode = self.group.plan()
+        self.group.stop()
+        self.group.clear_pose_targets()
+        self.group.execute(traj, wait=True)
+
+
 
 
 def main():
