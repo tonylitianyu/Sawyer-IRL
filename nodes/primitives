@@ -31,7 +31,7 @@ class MoveGroupPythonInterface(object):
 
         self.action_sub = rospy.Subscriber('action', String, self.arm_primitive_action_callback)
 
-        self.prim_dis = 0.2
+        self.prim_dis = 0.05
 
 
     def arm_primitive_action_callback(self, req):
@@ -39,6 +39,10 @@ class MoveGroupPythonInterface(object):
             self.move_left()
         elif req == String('forward'):
             self.move_forward()
+        elif req == String('backward'):
+            self.move_backward()
+        elif req == String('right'):
+            self.move_right()
 
 
     def move_left(self):
@@ -63,6 +67,30 @@ class MoveGroupPythonInterface(object):
             self.group.clear_pose_targets()
             self.group.execute(traj, wait=True)
             rospy.loginfo('forward')
+
+    def move_right(self):
+            curr_pose = self.group.get_current_pose().pose
+
+            curr_pose.position.y -= self.prim_dis
+            self.group.set_pose_target(curr_pose)
+
+            success, traj, p_time, errorcode = self.group.plan()
+            self.group.stop()
+            self.group.clear_pose_targets()
+            self.group.execute(traj, wait=True)
+            rospy.loginfo('right')
+
+    def move_backward(self):
+            curr_pose = self.group.get_current_pose().pose
+
+            curr_pose.position.x -= self.prim_dis
+            self.group.set_pose_target(curr_pose)
+
+            success, traj, p_time, errorcode = self.group.plan()
+            self.group.stop()
+            self.group.clear_pose_targets()
+            self.group.execute(traj, wait=True)
+            rospy.loginfo('backward')
 
 
 def main():
