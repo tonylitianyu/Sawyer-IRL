@@ -6,6 +6,9 @@ import copy
 import rospy
 import moveit_commander
 import moveit_msgs.msg
+import numpy as np
+import rospkg
+import random
 from std_msgs.msg import String, Bool
 
 class MoveGroupPythonInterface(object):
@@ -30,23 +33,105 @@ class MoveGroupPythonInterface(object):
                                                         queue_size=20)
 
         self.action_sub = rospy.Subscriber('action', String, self.arm_primitive_action_callback)
+        self.action_pub = rospy.Publisher('action', String, queue_size=10)
 
-        self.prim_dis = 0.05
 
+
+         
+        rospack = rospkg.RosPack()
+        # get the file path for rospy_tutorials
+        abs_path = rospack.get_path('sawyer_irl')
+        print(abs_path)
+
+
+        self.optimal_action = np.load(abs_path+'/nodes/example2.npy')
+        self.side_length = 0.4
+        unit_distance = self.side_length/float(self.optimal_action.shape[1]-1)
+        print(unit_distance)
+        self.prim_dis = unit_distance
+        self.left_top_x = 0.90
+        self.left_top_y = 0.20
+        self.height_limit = self.side_length
+        self.corner = [[self.left_top_x,self.left_top_y,0.0],[self.left_top_x,self.left_top_y-self.side_length,0.0],[self.left_top_x-self.side_length,self.left_top_y-self.side_length,0.0],[self.left_top_x-self.side_length,self.left_top_y,0.0]]
+
+        self.at_initial = False
+        self.delay = True
+
+        self.gripper_idx = 0
+
+
+    def from_coor_to_index(self,pos):
+        yi = int((self.left_top_x - pos.position.x)/self.prim_dis)
+        xi = int((self.left_top_y - pos.position.y)/self.prim_dis)
+        zi = int(pos.position.z/self.prim_dis)
+
+        return xi,yi,zi
+
+    def from_index_to_coor(self,xi,yi,zi):
+        pos = [0.0, 0.0, 0.0]
+        pos[0] = self.left_top_x - yi * self.prim_dis
+        pos[1] = self.left_top_y - xi * self.prim_dis
+        pos[2] = zi*self.prim_dis
+
+        return pos
 
     def arm_primitive_action_callback(self, req):
-        self.perform_primitive_move(req)
+        curr_pose = self.group.get_current_pose().pose
+        if self.at_initial == False:
+            pos = self.from_index_to_coor(2,0,0)
+            print(pos)
+            curr_pose.position.x = pos[0]
+            curr_pose.position.y = pos[1]
+            curr_pose.position.z = pos[2]
+            self.group.set_pose_target(curr_pose)
+            success, traj, p_time, errorcode = self.group.plan()
+            self.group.stop()
+            self.group.clear_pose_targets()
+            self.group.execute(traj, wait=True)
+            self.at_initial = True
+            
+            
+        else:
+            if self.delay:
+                rospy.sleep(5.)
+                self.delay = False
+            print(curr_pose)
+            xi,yi,zi = self.from_coor_to_index(curr_pose)
+            print(self.optimal_action)
+            print(self.gripper_idx, xi,yi,zi)
+            action_str = self.optimal_action[self.gripper_idx][zi][yi][xi]
+            print(action_str)
+
+            
+            self.perform_primitive_move(action_str)
+            
 
     def perform_primitive_move(self,dir):
         curr_pose = self.group.get_current_pose().pose
-        if dir == String('left'):
-            curr_pose.position.y += self.prim_dis
-        elif dir == String('forward'):
-            curr_pose.position.x += self.prim_dis
-        elif dir == String('right'):
-            curr_pose.position.y -= self.prim_dis
-        elif dir == String('backward'):
-            curr_pose.position.x -= self.prim_dis
+        if dir == 'LEFT':
+            if curr_pose.position.y < self.left_top_y:
+                curr_pose.position.y += self.prim_dis
+        elif dir == 'FORWARD':
+            if curr_pose.position.x < self.left_top_x:
+                curr_pose.position.x += self.prim_dis
+        elif dir == 'RIGHT':
+            if curr_pose.position.y > (self.left_top_y - self.side_length):
+                curr_pose.position.y -= self.prim_dis
+        elif dir == 'BACKWARD':
+            if curr_pose.position.x > (self.left_top_x - self.side_length):
+                curr_pose.position.x -= self.prim_dis
+        elif dir == 'UP':
+            if curr_pose.position.z < height_limit:
+                curr_pose.position.z += self.prim_dis
+        elif dir == 'DOWN':
+            if curr_pose.position.z > 0.0:
+                curr_pose.position.z -= self.prim_dis
+        elif dir == 'CLOSE':
+            self.gripper_idx = 1
+        elif dir == 'OPEN':
+            self.gripper_idx = 0
+
+
 
         self.group.set_pose_target(curr_pose)
         success, traj, p_time, errorcode = self.group.plan()
@@ -55,11 +140,17 @@ class MoveGroupPythonInterface(object):
         self.group.execute(traj, wait=True)
 
 
+        self.action_pub.publish("next")
+
+
 
 
 def main():
     moveit_commander.roscpp_initialize(sys.argv)
     mover = MoveGroupPythonInterface()
+
+
+
 
     rospy.spin()
 

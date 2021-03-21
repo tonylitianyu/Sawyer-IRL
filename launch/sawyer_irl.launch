@@ -4,7 +4,7 @@
     </include>
 
 
-    <node name="primitives" pkg="sawyer_irl" type="primitives" output="screen">
+    <node name="primitives" pkg="sawyer_irl" type="primitives" output="screen" cwd="node" >
       <remap from="joint_states" to="robot/joint_states"/> 
     </node>
 
