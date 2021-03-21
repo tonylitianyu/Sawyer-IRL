@@ -23,3 +23,4 @@ sawyer_moveit
 5. Enable the robot ```rosrun intera_interface enable_robot.py -e```
 6. Run the joint_server ```rosrun intera_interface joint_trajectory_action_server.py```
 7. ```roslaunch sawyer_irl sawyer_irl.launch```
+8. To start, push any string message to ```/action``` topic
