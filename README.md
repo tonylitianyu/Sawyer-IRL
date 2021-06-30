@@ -11,7 +11,7 @@ sawyer_moveit
 
 ## Instruction
 
-1. Connect with Sawyer through Ethernet
+1. Connect with Sawyer through Ethernet, and ```nmcli connection up Rethink```
 2. Ping 10.42.0.2 or ```sawyer.local``` to confirm connection
 3. Set environment variables
   ```
